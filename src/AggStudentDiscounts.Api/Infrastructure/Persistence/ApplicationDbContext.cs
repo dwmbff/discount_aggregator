@@ -7,7 +7,9 @@ public class ApplicationDbContext : DbContext
 {
     public DbSet<User> Users { get; set; }
     public DbSet<Application> Applications { get; set; }
+    public DbSet<ApplicationPhoto> ApplicationPhotos { get; set; }
     public DbSet<Vote> Votes { get; set; }
+    public DbSet<GeocodeCacheEntry> GeocodeCache { get; set; }
 
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
@@ -31,6 +33,7 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Application>(entity =>
         {
             entity.HasIndex(a => a.Status);
+            entity.HasIndex(a => new { a.UserId, a.CreatedAt });
 
             entity.HasOne(a => a.User)
                   .WithMany()
@@ -42,9 +45,25 @@ public class ApplicationDbContext : DbContext
             entity.Property(a => a.DiscountDescription).IsRequired().HasMaxLength(1000);
             entity.Property(a => a.Conditions).IsRequired().HasMaxLength(1000);
             entity.Property(a => a.RejectionReason).HasMaxLength(500);
+            entity.Property(a => a.Category).HasMaxLength(100);
+            entity.Property(a => a.Phone).HasMaxLength(100);
+            entity.Property(a => a.Website).HasMaxLength(300);
+            entity.Property(a => a.WorkingHours).HasMaxLength(300);
 
             entity.Property(a => a.Latitude).HasPrecision(18, 6);
             entity.Property(a => a.Longitude).HasPrecision(18, 6);
+        });
+
+        modelBuilder.Entity<ApplicationPhoto>(entity =>
+        {
+            entity.Property(p => p.FileName).IsRequired().HasMaxLength(260);
+            entity.Property(p => p.StoredName).IsRequired().HasMaxLength(100);
+            entity.Property(p => p.ContentType).HasMaxLength(100);
+
+            entity.HasOne(p => p.Application)
+                  .WithMany(a => a.Photos)
+                  .HasForeignKey(p => p.ApplicationId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Vote>(entity =>
@@ -60,6 +79,12 @@ public class ApplicationDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(v => v.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<GeocodeCacheEntry>(entity =>
+        {
+            entity.HasKey(c => c.Key);
+            entity.Property(c => c.Key).HasMaxLength(400);
         });
     }
 }

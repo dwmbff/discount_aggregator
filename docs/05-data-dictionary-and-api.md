@@ -17,12 +17,15 @@
 | `POST /api/applications` | Авториз. | Подать заявку (multipart/form-data) | FR-04 |
 | `GET /api/applications` | Авториз. | Мои заявки, фильтр `status` | FR-05 |
 | `GET /api/applications/{id}` | Автор / модератор | Детали заявки | FR-05 |
-| `DELETE /api/applications/{id}` | Автор | Отменить заявку в статусе «на проверке» | FR-05 |
+| `DELETE /api/applications/{id}` | Автор | Отменить заявку в статусе «на проверке» (статус `Cancelled`, учитывается в лимите) | FR-05 |
 | `GET /api/admin/applications` | Модератор | Очередь (по умолч. `OnModeration`) | FR-06 |
 | `PUT /api/admin/applications/{id}/approve` | Модератор | Одобрить | FR-06 |
 | `PUT /api/admin/applications/{id}/reject` | Модератор | Отклонить с причиной | FR-06 |
 | `PUT /api/admin/applications/{id}` | Модератор | Править заявку | FR-06 |
 | `PUT /api/admin/places/{id}` | Модератор | Править опубликованное заведение | FR-06 |
+| `GET /api/geocode/suggest?q=` | Гость | Автоподсказки (название/адрес, ≥ 3 символов) | FR-10 |
+| `GET /api/geocode/reverse?lat=&lng=` | Гость | Объект по точке на карте | FR-10 |
+| `GET /api/photos/{id}` | Гость (опубликованные) / автор, модератор | Файл-подтверждение | FR-09 |
 | `GET /api/feedback/contacts` | Гость | Контакты поддержки | FR-08 |
 | `GET /health` | Гость | Проверка работоспособности | NFR-05 |
 
@@ -50,9 +53,11 @@
 | `discount` | string | ✅ | ≤ 1000 |
 | `conditions` | string | ✅ | ≤ 1000 |
 | `latitude` / `longitude` | number | — | −90…90 / −180…180 |
+| `externalId` | string | — | идентификатор из `/api/geocode/suggest`; по нему сервер дополняет заявку |
+| `category`, `phone`, `website`, `workingHours` | string | — | ≤ 100 / 100 / 300 / 300; если пусты — берутся из геосервиса |
 | `validityPeriod` | string | — | свободный текст |
 | `sourceUrl` | string | — | абсолютный http(s) URL |
-| `photos` | file[] | ✅ | ≥ 1; `.jpg .jpeg .png .pdf .heic`; запрос ≤ 20 МБ |
+| `photos` | file[] | ✅ | ≥ 1; `.jpg .jpeg .png .pdf .heic`; ≤ 10 МБ на файл, ≤ 30 МБ на запрос; сигнатура файла проверяется |
 
 ## 5.4 Пример сквозного сценария
 

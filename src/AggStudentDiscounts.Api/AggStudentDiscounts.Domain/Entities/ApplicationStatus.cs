@@ -4,5 +4,7 @@ public enum ApplicationStatus
 {
     OnModeration,
     Published,
-    Rejected
+    Rejected,
+    /// <summary>Отменена автором до рассмотрения. Пользователю не показывается, но учитывается в суточном лимите.</summary>
+    Cancelled
 }

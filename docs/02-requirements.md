@@ -1,19 +1,23 @@
 # 2. Требования
 
+Исходные требования — в [техническом задании](technical-specification.md); соответствие реализации — в [разделе 7](07-specification-compliance.md).
+
 ## 2.1 Бизнес-правила
 
 | ID | Правило | Реализация |
 |---|---|---|
 | BR-01 | Заявка становится видимой в каталоге только после одобрения модератором | `ApplicationStatus.Published`, фильтр в `EstablishmentsController` |
-| BR-02 | Отменить (удалить) заявку может только автор и только в статусе «на проверке» | `ApplicationsController.CancelApplication` → 409 иначе |
-| BR-03 | Обычный пользователь — не более **4 заявок в сутки (UTC)**; модераторы без ограничений | `ApplicationsController.DailyLimit` → 429 |
-| BR-04 | К заявке нужно приложить ≥ 1 файл подтверждения: JPEG, PNG, HEIC, PDF; суммарно ≤ 20 МБ | `CreateApplicationRequestValidator`, `RequestSizeLimit` |
+| BR-02 | Отменить заявку может только автор и только в статусе «на проверке»; заявка получает статус `Cancelled` и скрывается | `ApplicationsController.CancelApplication` → 409 иначе |
+| BR-03 | Обычный пользователь — не более **4 заявок в сутки (UTC)**, отменённые заявки входят в счётчик; модераторы без ограничений | `ApplicationsController.DailyLimit` → 429 |
+| BR-04 | К заявке нужно приложить ≥ 1 файл подтверждения: JPEG, PNG, HEIC, PDF; ≤ 10 МБ на файл; формат проверяется по расширению и сигнатуре | `CreateApplicationRequestValidator`, `UploadRules` |
 | BR-05 | Один пользователь может голосовать за одно заведение не чаще **1 раза в 15 дней**; модераторы без ограничений | `EstablishmentsController.CastVote` → 429 |
 | BR-06 | Курс студента автоматически увеличивается на 1 каждое 1 октября | `User.RefreshCourse` |
 | BR-07 | Отклонение заявки требует текстовой причины (≤ 500 символов) | `RejectApplicationRequestValidator` |
 | BR-08 | Заявка в финальном статусе (`Published`, `Rejected`) не может быть повторно одобрена/отклонена | `Application.Approve/Reject` → 409 |
 | BR-09 | Email уникален без учёта регистра | уникальный индекс + нормализация |
 | BR-10 | Пароль — минимум 8 символов, хранится только в виде BCrypt-хеша | `RegisterRequestValidator`, `AuthController` |
+| BR-11 | Ответы геосервиса кэшируются ≥ 24 ч; при сбое сервиса отдаётся кэш, заявка подаётся с ручным вводом | `NominatimGeocodingService` |
+| BR-12 | Пустые атрибуты заявки (категория, телефон, сайт, режим работы) дополняются из геосервиса по `externalId` | `ApplicationsController.EnrichAsync` |
 
 ## 2.2 Пользовательские истории и критерии приёмки
 
@@ -40,7 +44,7 @@
 
 ### Эпик C. Вклад пользователя
 
-**US-05. Предложить скидку.** Как студент, я хочу отправить заявку с фото-подтверждением.
+**US-05. Предложить скидку.** Как студент, я хочу найти заведение через автоподсказки (или поставить точку вручную) и отправить заявку с фото-подтверждением.
 - Given все обязательные поля и ≥ 1 допустимый файл → 201, статус `OnModeration`
 - Given нет файла / недопустимый формат / пустое поле → 400
 - Given 5-я заявка за сутки → 429 (BR-03)
@@ -49,7 +53,7 @@
 - Список только собственных заявок, фильтр по статусу
 - Чужую заявку открыть нельзя → 403
 
-**US-07. Отменить заявку.** Пока заявка на проверке, я могу её отозвать (BR-02).
+**US-07. Отменить заявку.** Пока заявка на проверке, я могу её отозвать (BR-02); отмена не освобождает слот в суточном лимите.
 
 **US-08. Проголосовать.** Как авторизованный студент, я хочу отметить, что скидка (не) актуальна.
 - Без токена → 401; повторный голос раньше 15 дней → 429 (BR-05)
@@ -76,8 +80,9 @@
 | FR-06 | Модерация: очередь, approve/reject, редактирование | US-09–US-11 | Must |
 | FR-07 | Голосование за актуальность | US-04, US-08 | Should |
 | FR-08 | Контакты обратной связи | — | Could |
-| FR-09 | Хранение файлов подтверждения | US-05 | Should (бэклог) |
-| FR-10 | Верификация студенческого статуса | — | Won't (MVP) |
+| FR-09 | Хранение и выдача файлов подтверждения | US-05 | Must |
+| FR-10 | Автоподсказки адресов, геокодинг и автообогащение заявки | US-05 | Must |
+| FR-11 | Верификация студенческого статуса | — | Won't (MVP) |
 
 ## 2.4 Нефункциональные требования
 
@@ -89,7 +94,7 @@
 | NFR-04 | Надёжность | Состояние (в т. ч. голоса) хранится в БД, а не в памяти процесса | ✅ |
 | NFR-05 | Эксплуатация | `/health`, запуск одной командой (`docker compose up`), миграции при старте | ✅ |
 | NFR-06 | Качество | Автотесты на бизнес-правила и сквозной сценарий, CI на каждый push | ✅ |
-| NFR-07 | Производительность | p95 ≤ 500 мс при каталоге до 10 000 заведений | ⏳ нужен индекс/гео-запрос в БД (см. риски) |
+| NFR-07 | Производительность | Отклик на типовые запросы ≤ 3 с (ТЗ 5.1) | ⏳ нагрузочное тестирование не проводилось; радиусный поиск — в приложении (см. риски) |
 | NFR-08 | Совместимость | Контракт API описан в OpenAPI 3.0 (`openapi.yaml`) и Swagger UI | ✅ |
 | NFR-09 | Конфиденциальность | Минимум ПДн; пароли и токены не логируются | ✅ |
 
@@ -100,8 +105,10 @@
 | FR-01 / BR-09, BR-10 | `POST /api/auth/register`, `/login` | `AuthTests.*` |
 | FR-02 | `GET /api/admin/*` (роль Moderator) | `Admin_Endpoints_RequireModeratorRole` |
 | FR-03 | `GET /api/establishments` | `FullLifecycle_Submit_Approve_Publish_Vote` |
-| FR-04 / BR-03, BR-04 | `POST /api/applications` | `CreateApplication_WithoutPhoto_Returns400`, `CreateApplication_FifthInADay_Returns429` |
-| FR-05 / BR-02 | `GET/DELETE /api/applications` | `User_CannotSeeOrCancelSomeoneElsesApplication` |
+| FR-04 / BR-03, BR-04 | `POST /api/applications` | `CreateApplication_WithoutPhoto_Returns400`, `CreateApplication_FifthInADay_Returns429`, `CreateApplication_FileWithSpoofedExtension_Returns400`, `CancelledApplication_IsHidden_ButStillCountsTowardDailyLimit` |
+| FR-05 / BR-02 | `GET/DELETE /api/applications` | `User_CannotSeeOrCancelSomeoneElsesApplication`, `CancelStateTests` |
+| FR-09 | `GET /api/photos/{id}` | `Photo_IsStored_AndVisibilityFollowsApplicationStatus` |
+| FR-10 / BR-11, BR-12 | `GET /api/geocode/*`, `POST /api/applications` | `GeocodingTests.*`, `CreateApplication_WithExternalId_EnrichesAttributes`, `CreateApplication_WhenGeoDown_StillSucceeds` |
 | FR-06 / BR-07, BR-08 | `PUT /api/admin/applications/{id}/approve\|reject` | `Reject_RequiresReason_AndSecondDecisionReturns409`, `ApplicationStateMachineTests.*` |
 | FR-07 / BR-05 | `POST /api/establishments/{id}/vote` | `FullLifecycle_Submit_Approve_Publish_Vote`, `Vote_InvalidValue_Returns400` |
 | BR-06 | `GET /api/auth/me` | `UserCourseTests.*` |

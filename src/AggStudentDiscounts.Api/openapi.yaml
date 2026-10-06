@@ -1,195 +1,623 @@
-openapi: 3.0.3
+openapi: 3.0.4
 info:
-  title: API Скидки студентов (карта заведений)
-  description: |
-    REST API для проекта интерактивной карты скидок для студентов.
-    Поддерживает роли: Гость, Пользователь, Модератор, Администратор.
-    Аутентификация через JWT (Bearer token).
-  version: 1.0.0
-servers:
-  - url: https://api.example.com
-    description: Продакшн сервер
-  - url: http://localhost:5075
-    description: Локальный сервер разработки
-
+  title: AggStudentDiscounts API
+  description: 'API агрегатора студенческих скидок: каталог, заявки, модерация, голосование
+    за актуальность.'
+  version: '1.0'
+paths:
+  /api/admin/applications:
+    get:
+      tags:
+      - Admin
+      parameters:
+      - name: status
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ApplicationListResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationListResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationListResponse'
+  /api/admin/applications/{id}/approve:
+    put:
+      tags:
+      - Admin
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/PlaceResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/PlaceResponse'
+  /api/admin/applications/{id}/reject:
+    put:
+      tags:
+      - Admin
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectApplicationRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/RejectApplicationRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/RejectApplicationRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ApplicationResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationResponse'
+  /api/admin/applications/{id}:
+    put:
+      tags:
+      - Admin
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateApplicationRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/UpdateApplicationRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/UpdateApplicationRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ApplicationResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationResponse'
+  /api/admin/places/{id}:
+    put:
+      tags:
+      - Admin
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateApplicationRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/UpdateApplicationRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/UpdateApplicationRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/PlaceResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/PlaceResponse'
+  /api/applications:
+    get:
+      tags:
+      - Applications
+      parameters:
+      - name: status
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ApplicationListResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationListResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationListResponse'
+    post:
+      tags:
+      - Applications
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                PlaceName:
+                  type: string
+                Address:
+                  type: string
+                Latitude:
+                  type: number
+                  format: double
+                Longitude:
+                  type: number
+                  format: double
+                Discount:
+                  type: string
+                Conditions:
+                  type: string
+                ValidityPeriod:
+                  type: string
+                SourceUrl:
+                  type: string
+                ExternalId:
+                  type: string
+                Category:
+                  type: string
+                Phone:
+                  type: string
+                Website:
+                  type: string
+                WorkingHours:
+                  type: string
+                Photos:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+            encoding:
+              PlaceName:
+                style: form
+              Address:
+                style: form
+              Latitude:
+                style: form
+              Longitude:
+                style: form
+              Discount:
+                style: form
+              Conditions:
+                style: form
+              ValidityPeriod:
+                style: form
+              SourceUrl:
+                style: form
+              ExternalId:
+                style: form
+              Category:
+                style: form
+              Phone:
+                style: form
+              Website:
+                style: form
+              WorkingHours:
+                style: form
+              Photos:
+                style: form
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ApplicationResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationResponse'
+  /api/applications/{id}:
+    get:
+      tags:
+      - Applications
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ApplicationResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationResponse'
+    delete:
+      tags:
+      - Applications
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+  /api/auth/register:
+    post:
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+  /api/auth/login:
+    post:
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+  /api/auth/me:
+    get:
+      tags:
+      - Auth
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+  /api/establishments:
+    get:
+      tags:
+      - Establishments
+      parameters:
+      - name: search
+        in: query
+        schema:
+          type: string
+      - name: district
+        in: query
+        schema:
+          type: string
+      - name: radius
+        in: query
+        schema:
+          type: number
+          format: double
+      - name: lat
+        in: query
+        schema:
+          type: number
+          format: double
+      - name: lng
+        in: query
+        schema:
+          type: number
+          format: double
+      - name: sortBy
+        in: query
+        schema:
+          type: string
+      - name: sortOrder
+        in: query
+        schema:
+          type: string
+      - name: page
+        in: query
+        schema:
+          type: integer
+          format: int32
+          default: 1
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/PlaceListResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceListResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/PlaceListResponse'
+  /api/establishments/{id}:
+    get:
+      tags:
+      - Establishments
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/PlaceResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaceResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/PlaceResponse'
+  /api/establishments/{id}/votes:
+    get:
+      tags:
+      - Establishments
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/VoteStatsResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoteStatsResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/VoteStatsResponse'
+  /api/establishments/{id}/vote:
+    post:
+      tags:
+      - Establishments
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoteRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/VoteRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/VoteRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/VoteStatsResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoteStatsResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/VoteStatsResponse'
+  /api/feedback/contacts:
+    get:
+      tags:
+      - Feedback
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ContactsResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactsResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ContactsResponse'
+  /api/geocode/suggest:
+    get:
+      tags:
+      - Geocode
+      parameters:
+      - name: q
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GeoPlaceResponse'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GeoPlaceResponse'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GeoPlaceResponse'
+  /api/geocode/reverse:
+    get:
+      tags:
+      - Geocode
+      parameters:
+      - name: lat
+        in: query
+        schema:
+          type: number
+          format: double
+      - name: lng
+        in: query
+        schema:
+          type: number
+          format: double
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/GeoPlaceResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeoPlaceResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/GeoPlaceResponse'
+  /api/photos/{id}:
+    get:
+      tags:
+      - Photos
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
 components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-
   schemas:
-    # ---------- Пользователь ----------
-    User:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        email:
-          type: string
-          format: email
-        name:
-          type: string
-          description: Имя/никнейм
-        university:
-          type: string
-          description: ВУЗ
-        department:
-          type: string
-          description: Кафедра
-        course:
-          type: integer
-          minimum: 1
-          maximum: 6
-        telegram:
-          type: string
-          nullable: true
-        role:
-          type: string
-          enum: [guest, user, moderator, admin]
-          default: user
-        createdAt:
-          type: string
-          format: date-time
-
-    RegisterRequest:
-      type: object
-      required:
-        - email
-        - password
-        - name
-        - university
-        - department
-        - course
-      properties:
-        email:
-          type: string
-          format: email
-        password:
-          type: string
-          minLength: 6
-        name:
-          type: string
-        university:
-          type: string
-        department:
-          type: string
-        course:
-          type: integer
-          minimum: 1
-          maximum: 6
-        telegram:
-          type: string
-
-    LoginRequest:
-      type: object
-      required:
-        - email
-        - password
-      properties:
-        email:
-          type: string
-        password:
-          type: string
-
-    AuthResponse:
-      type: object
-      properties:
-        accessToken:
-          type: string
-        tokenType:
-          type: string
-          example: Bearer
-        expiresIn:
-          type: integer
-        user:
-          $ref: '#/components/schemas/User'
-
-    # ---------- Заведение (опубликованное) ----------
-    Place:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        address:
-          type: string
-        latitude:
-          type: number
-          format: double
-        longitude:
-          type: number
-          format: double
-        category:
-          type: string
-          description: Категория заведения (кафе, магазин и т.д.)
-        discount:
-          type: string
-          description: Описание скидки
-        conditions:
-          type: string
-          description: Условия получения скидки
-        validityPeriod:
-          type: string
-          nullable: true
-          description: Период действия скидки (текст или даты)
-        photos:
-          type: array
-          items:
-            type: string
-            format: uri
-          description: Ссылки на фото (подтверждения)
-        sourceUrl:
-          type: string
-          nullable: true
-          description: Ссылка на источник информации
-        votesYes:
-          type: integer
-          description: Количество голосов "Да"
-        votesNo:
-          type: integer
-          description: Количество голосов "Нет"
-        lastVoteDateYes:
-          type: string
-          format: date-time
-          nullable: true
-          description: Дата последнего голосования "Да"
-        lastVoteDateNo:
-          type: string
-          format: date-time
-          nullable: true
-          description: Дата последнего голосования "Нет"
-        status:
-          type: string
-          enum: [pending, published, rejected]
-          description: Статус публикации (для модерации)
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    PlaceListResponse:
+    ApplicationListResponse:
       type: object
       properties:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/Place'
+            $ref: '#/components/schemas/ApplicationResponse'
+          nullable: true
         total:
           type: integer
-        page:
-          type: integer
-        pageSize:
-          type: integer
-
-    # ---------- Заявка на добавление ----------
-    Application:
+          format: int32
+      additionalProperties: false
+    ApplicationResponse:
       type: object
       properties:
         id:
@@ -200,105 +628,323 @@ components:
           format: uuid
         placeName:
           type: string
-          description: Название заведения
+          nullable: true
         address:
           type: string
+          nullable: true
         latitude:
           type: number
+          format: double
         longitude:
           type: number
+          format: double
+        category:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        website:
+          type: string
+          nullable: true
+        workingHours:
+          type: string
+          nullable: true
         discount:
           type: string
+          nullable: true
         conditions:
           type: string
+          nullable: true
         validityPeriod:
           type: string
           nullable: true
         sourceUrl:
           type: string
           nullable: true
-        photoUrls:
+        photos:
           type: array
           items:
             type: string
-        enrichedData:
-          type: object
-          description: Автоматически обогащённые данные из геоисточников
-          additionalProperties: true
+          nullable: true
         status:
           type: string
-          enum: [pending, approved, rejected]
+          nullable: true
         rejectionReason:
           type: string
           nullable: true
         createdAt:
           type: string
           format: date-time
-        updatedAt:
+        moderatedAt:
           type: string
           format: date-time
-
-    CreateApplicationRequest:
+          nullable: true
+      additionalProperties: false
+    AuthResponse:
       type: object
-      required:
-        - placeName
-        - address
-        - discount
-        - conditions
-        - photos
       properties:
-        placeName:
+        accessToken:
           type: string
+          nullable: true
+        tokenType:
+          type: string
+          nullable: true
+        expiresIn:
+          type: integer
+          format: int32
+        user:
+          $ref: '#/components/schemas/UserResponse'
+      additionalProperties: false
+    ContactsResponse:
+      type: object
+      properties:
+        telegramUrl:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+      additionalProperties: false
+    GeoPlaceResponse:
+      type: object
+      properties:
+        externalId:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
         address:
           type: string
+          nullable: true
         latitude:
           type: number
-          nullable: true
+          format: double
         longitude:
           type: number
+          format: double
+        category:
+          type: string
           nullable: true
-        discount:
+        phone:
           type: string
-        conditions:
+          nullable: true
+        website:
           type: string
-        validityPeriod:
+          nullable: true
+        workingHours:
           type: string
-        sourceUrl:
+          nullable: true
+      additionalProperties: false
+    LoginRequest:
+      type: object
+      properties:
+        email:
           type: string
-        photos:
-          type: array
-          items:
-            type: string
-            format: binary
-          description: Фото подтверждения (JPEG, HEIC, PNG, PDF)
-
-    ApplicationListResponse:
+          nullable: true
+        password:
+          type: string
+          nullable: true
+      additionalProperties: false
+    PlaceListResponse:
       type: object
       properties:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/Application'
+            $ref: '#/components/schemas/PlaceResponse'
+          nullable: true
         total:
           type: integer
-
-    # ---------- Голосование ----------
+          format: int32
+        page:
+          type: integer
+          format: int32
+        pageSize:
+          type: integer
+          format: int32
+      additionalProperties: false
+    PlaceResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        category:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        website:
+          type: string
+          nullable: true
+        workingHours:
+          type: string
+          nullable: true
+        discount:
+          type: string
+          nullable: true
+        conditions:
+          type: string
+          nullable: true
+        validityPeriod:
+          type: string
+          nullable: true
+        photos:
+          type: array
+          items:
+            type: string
+          nullable: true
+        votesYes:
+          type: integer
+          format: int32
+        votesNo:
+          type: integer
+          format: int32
+        lastVoteDateYes:
+          type: string
+          format: date-time
+          nullable: true
+        lastVoteDateNo:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          nullable: true
+      additionalProperties: false
+    RegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          nullable: true
+        password:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        university:
+          type: string
+          nullable: true
+        department:
+          type: string
+          nullable: true
+        course:
+          type: integer
+          format: int32
+        telegram:
+          type: string
+          nullable: true
+      additionalProperties: false
+    RejectApplicationRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          nullable: true
+      additionalProperties: false
+    UpdateApplicationRequest:
+      type: object
+      properties:
+        placeName:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        latitude:
+          type: number
+          format: double
+          nullable: true
+        longitude:
+          type: number
+          format: double
+          nullable: true
+        category:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        website:
+          type: string
+          nullable: true
+        workingHours:
+          type: string
+          nullable: true
+        discount:
+          type: string
+          nullable: true
+        conditions:
+          type: string
+          nullable: true
+        validityPeriod:
+          type: string
+          nullable: true
+        sourceUrl:
+          type: string
+          nullable: true
+      additionalProperties: false
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        university:
+          type: string
+          nullable: true
+        department:
+          type: string
+          nullable: true
+        course:
+          type: integer
+          format: int32
+        telegram:
+          type: string
+          nullable: true
+        role:
+          type: string
+          nullable: true
+      additionalProperties: false
     VoteRequest:
       type: object
-      required:
-        - vote
       properties:
         vote:
           type: string
-          enum: [yes, no]
-
-    VoteStats:
+          nullable: true
+      additionalProperties: false
+    VoteStatsResponse:
       type: object
       properties:
-        yes:
+        'yes':
           type: integer
-        no:
+          format: int32
+        'no':
           type: integer
+          format: int32
         lastVoteDateYes:
           type: string
           format: date-time
@@ -309,649 +955,25 @@ components:
           nullable: true
         canVoteAgain:
           type: boolean
-          description: Может ли текущий пользователь голосовать (не прошло 15 дней)
-        nextVoteDate:
-          type: string
-          format: date-time
-          nullable: true
-
-    # ---------- Фильтры и поиск ----------
-    PlaceFilter:
-      type: object
-      properties:
-        search:
-          type: string
-          description: Поиск по наименованию
-        district:
-          type: string
-          description: Район Москвы
-        radius:
-          type: number
-          description: Радиус поиска (в метрах) от точки
-        lat:
-          type: number
-          description: Широта центра для радиуса
-        lng:
-          type: number
-          description: Долгота центра для радиуса
-        category:
-          type: string
-        sortBy:
-          type: string
-          enum: [name, votes, createdAt]
-        sortOrder:
-          type: string
-          enum: [asc, desc]
-        page:
-          type: integer
-          default: 1
-        pageSize:
-          type: integer
-          default: 20
-
-    # ---------- Геокодинг (автоподсказки) ----------
-    SuggestItem:
-      type: object
-      properties:
-        name:
-          type: string
-          description: Наименование заведения (или объекта)
-        address:
-          type: string
-        latitude:
-          type: number
-        longitude:
-          type: number
-
-    # ---------- Обратная связь ----------
-    ContactsResponse:
-      type: object
-      properties:
-        telegramUrl:
-          type: string
-          description: Ссылка на Telegram администрации
-        email:
-          type: string
-          format: email
-
-    # ---------- Ошибки ----------
-    ErrorResponse:
-      type: object
-      properties:
-        code:
-          type: integer
-        message:
-          type: string
-        details:
-          type: object
-
+      additionalProperties: false
+  securitySchemes:
+    Bearer:
+      type: http
+      description: JWT, полученный через POST /api/auth/login
+      scheme: bearer
+      bearerFormat: JWT
 security:
-  - bearerAuth: []
-
-paths:
-  # ----- Аутентификация и профиль -----
-  /api/auth/register:
-    post:
-      summary: Регистрация нового пользователя
-      operationId: register
-      tags:
-        - Authentication
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RegisterRequest'
-      responses:
-        '201':
-          description: Пользователь создан
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuthResponse'
-        '400':
-          description: Неверные данные или email уже существует
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /api/auth/login:
-    post:
-      summary: Вход в систему
-      operationId: login
-      tags:
-        - Authentication
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LoginRequest'
-      responses:
-        '200':
-          description: Успешный вход
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuthResponse'
-        '401':
-          description: Неверные учётные данные
-
-  /api/auth/me:
-    get:
-      summary: Получить данные текущего пользователя
-      operationId: getCurrentUser
-      tags:
-        - Authentication
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Данные пользователя
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-        '401':
-          description: Не авторизован
-
-  # ----- Заведения (публичные) -----
-  /api/establishments:
-    get:
-      summary: Получить список заведений с фильтрацией
-      operationId: getEstablishments
-      tags:
-        - Places
-      parameters:
-        - in: query
-          name: search
-          schema:
-            type: string
-        - in: query
-          name: district
-          schema:
-            type: string
-        - in: query
-          name: radius
-          schema:
-            type: number
-        - in: query
-          name: lat
-          schema:
-            type: number
-        - in: query
-          name: lng
-          schema:
-            type: number
-        - in: query
-          name: category
-          schema:
-            type: string
-        - in: query
-          name: page
-          schema:
-            type: integer
-        - in: query
-          name: pageSize
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Список заведений (только опубликованные)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PlaceListResponse'
-
-  /api/establishments/{id}:
-    get:
-      summary: Получить карточку заведения по ID
-      operationId: getPlaceById
-      tags:
-        - Places
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Данные заведения
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Place'
-        '404':
-          description: Заведение не найдено
-
-  # ----- Голосование за актуальность -----
-  /api/establishments/{id}/vote:
-    post:
-      summary: Проголосовать за актуальность скидки
-      operationId: vote
-      tags:
-        - Voting
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/VoteRequest'
-      responses:
-        '200':
-          description: Голос учтён
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VoteStats'
-        '429':
-          description: Повторное голосование ранее чем через 15 дней
-        '401':
-          description: Требуется авторизация
-
-  /api/establishments/{id}/votes:
-    get:
-      summary: Получить статистику голосования по заведению
-      operationId: getVoteStats
-      tags:
-        - Voting
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Статистика голосов и даты последних голосов
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VoteStats'
-
-  # ----- Заявки от пользователей -----
-  /api/applications:
-    post:
-      summary: Подать заявку на добавление заведения
-      operationId: createApplication
-      tags:
-        - Applications
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/CreateApplicationRequest'
-      responses:
-        '201':
-          description: Заявка создана и отправлена на модерацию
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application'
-        '400':
-          description: Ошибка валидации
-        '429':
-          description: Превышен лимит 4 заявки в сутки
-        '401':
-          description: Требуется авторизация
-
-    get:
-      summary: Получить список заявок текущего пользователя (личный кабинет)
-      operationId: getUserApplications
-      tags:
-        - Applications
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: query
-          name: status
-          schema:
-            type: string
-            enum: [pending, approved, rejected]
-        - in: query
-          name: page
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Список заявок пользователя
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApplicationListResponse'
-
-  /api/applications/{id}:
-    get:
-      summary: Получить детали заявки
-      operationId: getApplicationById
-      tags:
-        - Applications
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Данные заявки
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application'
-        '403':
-          description: Доступ только к своим заявкам (или модератор)
-
-    delete:
-      summary: Отменить заявку (только если статус "на проверке")
-      operationId: cancelApplication
-      tags:
-        - Applications
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '204':
-          description: Заявка отменена
-        '403':
-          description: Заявка принадлежит другому пользователю
-        '409':
-          description: Заявку нельзя отменить (уже обработана)
-        '404':
-          description: Заявка не найдена
-
-  # ----- Администрирование и модерация -----
-  /api/admin/applications:
-    get:
-      summary: Получить очередь заявок на проверке
-      operationId: getModerationQueue
-      tags:
-        - Moderation
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: query
-          name: status
-          schema:
-            type: string
-            default: pending
-        - in: query
-          name: page
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Список заявок для модерации
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApplicationListResponse'
-        '403':
-          description: Недостаточно прав (требуется роль модератора или админа)
-
-  /api/admin/applications/{id}/approve:
-    put:
-      summary: Утвердить заявку (опубликовать заведение)
-      operationId: approveApplication
-      tags:
-        - Moderation
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Заявка утверждена, заведение опубликовано
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Place'
-        '403':
-          description: Недостаточно прав
-
-  /api/admin/applications/{id}/reject:
-    put:
-      summary: Отклонить заявку с указанием причины
-      operationId: rejectApplication
-      tags:
-        - Moderation
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                reason:
-                  type: string
-              required:
-                - reason
-      responses:
-        '200':
-          description: Заявка отклонена
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application'
-        '403':
-          description: Недостаточно прав
-
-  /api/admin/applications/{id}:
-    put:
-      summary: Редактировать заявку перед утверждением
-      operationId: editApplication
-      tags:
-        - Moderation
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                placeName:
-                  type: string
-                address:
-                  type: string
-                discount:
-                  type: string
-                conditions:
-                  type: string
-                validityPeriod:
-                  type: string
-                sourceUrl:
-                  type: string
-      responses:
-        '200':
-          description: Заявка обновлена
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Application'
-
-  /api/admin/places/{id}:
-    put:
-      summary: Редактировать опубликованное заведение
-      operationId: editPublishedPlace
-      tags:
-        - Moderation
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Place'
-      responses:
-        '200':
-          description: Заведение обновлено
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Place'
-        '403':
-          description: Недостаточно прав
-
-  # ----- Геокодинг и автоподсказки -----
-  /geocode/suggest:
-    get:
-      summary: Автоподсказки для адреса/названия заведения
-      operationId: suggestPlaces
-      tags:
-        - Geocoding
-      parameters:
-        - in: query
-          name: query
-          required: true
-          schema:
-            type: string
-          description: Вводимая строка (название или адрес)
-        - in: query
-          name: limit
-          schema:
-            type: integer
-            default: 10
-      responses:
-        '200':
-          description: Список предложений с адресами и координатами
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/SuggestItem'
-        '400':
-          description: Пустой запрос
-
-  /geocode/reverse:
-    get:
-      summary: Определить адрес по координатам (для ручной точки)
-      operationId: reverseGeocode
-      tags:
-        - Geocoding
-      parameters:
-        - in: query
-          name: lat
-          required: true
-          schema:
-            type: number
-        - in: query
-          name: lng
-          required: true
-          schema:
-            type: number
-      responses:
-        '200':
-          description: Адрес
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  address:
-                    type: string
-                  components:
-                    type: object
-
-  # ----- Обратная связь (контакты) -----
-  /api/feedback/contacts:
-    get:
-      summary: Получить контакты администрации (Telegram и email)
-      operationId: getContacts
-      tags:
-        - Feedback
-      responses:
-        '200':
-          description: Контактная информация
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ContactsResponse'
-
-  # ----- Загрузка файлов (общий эндпоинт) -----
-  /upload:
-    post:
-      summary: Загрузить фото (используется при создании заявки)
-      operationId: uploadFile
-      tags:
-        - Files
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                file:
-                  type: string
-                  format: binary
-      responses:
-        '201':
-          description: URL загруженного файла
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  url:
-                    type: string
-        '400':
-          description: Недопустимый формат (JPEG, HEIC, PNG, PDF)
+- Bearer: []
+tags:
+- name: Admin
+- name: Applications
+- name: Auth
+- name: Establishments
+- name: Feedback
+- name: Geocode
+- name: Photos
+servers:
+- url: http://localhost:8080
+  description: Docker Compose
+- url: http://localhost:5075
+  description: dotnet run

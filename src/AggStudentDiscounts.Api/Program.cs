@@ -21,6 +21,12 @@ builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "AggStudentDiscounts API",
+        Version = "1.0",
+        Description = "API агрегатора студенческих скидок: каталог, заявки, модерация, голосование за актуальность."
+    });
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Type = SecuritySchemeType.Http,
@@ -57,6 +63,18 @@ builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptio
 builder.Services.AddSingleton<ITokenService, TokenService>();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
+
+builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection(StorageOptions.SectionName));
+builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
+
+builder.Services.Configure<GeocodingOptions>(builder.Configuration.GetSection(GeocodingOptions.SectionName));
+builder.Services.AddHttpClient<IGeocodingService, NominatimGeocodingService>((sp, client) =>
+{
+    var geo = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<GeocodingOptions>>().Value;
+    client.BaseAddress = new Uri(geo.BaseUrl);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd(geo.UserAgent);
+    client.Timeout = TimeSpan.FromSeconds(5);
+});
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -117,6 +135,12 @@ if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
     {
         await DbSeeder.SeedAsync(db, app.Configuration);
     }
+}
+
+if (app.Configuration.GetValue<bool>("Security:RequireHttps"))
+{
+    app.UseHsts();
+    app.UseHttpsRedirection();
 }
 
 app.UseCors();

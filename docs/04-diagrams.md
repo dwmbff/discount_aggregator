@@ -33,13 +33,16 @@ stateDiagram-v2
     [*] --> OnModeration: POST /applications
     OnModeration --> Published: approve (Moderator)
     OnModeration --> Rejected: reject + причина (Moderator)
-    OnModeration --> [*]: DELETE (автор)
+    OnModeration --> Cancelled: DELETE (автор)
     Published --> Published: правка модератором
     Published --> [*]
     Rejected --> [*]
+    Cancelled --> [*]
     note right of Published
         Финальные статусы (BR-08):
         повторное approve/reject → 409
+        Cancelled скрыта от пользователя,
+        но учитывается в лимите 4/сутки
     end note
 ```
 
@@ -104,6 +107,7 @@ erDiagram
     USERS ||--o{ APPLICATIONS : "подаёт"
     USERS ||--o{ VOTES : "голосует"
     APPLICATIONS ||--o{ VOTES : "получает"
+    APPLICATIONS ||--o{ APPLICATION_PHOTOS : "содержит"
 
     USERS {
         uuid Id PK
@@ -129,10 +133,27 @@ erDiagram
         string Conditions "≤1000"
         string ValidityPeriod "nullable"
         string SourceLink "nullable"
-        enum Status "OnModeration | Published | Rejected"
+        string Category "nullable, из геосервиса или вручную"
+        string Phone "nullable"
+        string Website "nullable"
+        string WorkingHours "nullable"
+        enum Status "OnModeration | Published | Rejected | Cancelled"
         string RejectionReason "nullable, ≤500"
         datetime CreatedAt
         datetime ModeratedAt "nullable"
+    }
+    APPLICATION_PHOTOS {
+        uuid Id PK
+        uuid ApplicationId FK
+        string FileName
+        string StoredName "имя на диске"
+        string ContentType
+        long Size
+    }
+    GEOCODE_CACHE {
+        string Key PK "тип запроса + параметры"
+        text ResponseJson
+        datetime ExpiresAt ">= 24 ч"
     }
     VOTES {
         uuid Id PK
@@ -157,6 +178,10 @@ flowchart LR
         A[JWT Bearer + Role policy] --> C
     end
     DB[(PostgreSQL)]
+    FS[(Файловое хранилище)]
+    GEO[Nominatim / OpenStreetMap]
     W -- HTTPS + JWT --> A
     E --> DB
+    C --> FS
+    C -- кэш 24 ч --> GEO
 ```

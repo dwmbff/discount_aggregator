@@ -32,6 +32,7 @@ public class EstablishmentsController(ApplicationDbContext context) : Controller
 
         var query = context.Applications
             .AsNoTracking()
+            .Include(a => a.Photos)
             .Where(a => a.Status == ApplicationStatus.Published);
 
         if (!string.IsNullOrWhiteSpace(search))
@@ -68,7 +69,7 @@ public class EstablishmentsController(ApplicationDbContext context) : Controller
         return Ok(new PlaceListResponse
         {
             Items = pageItems
-                .Select(a => MapToPlaceResponse(a, votes.Where(v => v.ApplicationId == a.Id).ToList()))
+                .Select(a => a.ToPlace(BuildStats(votes.Where(v => v.ApplicationId == a.Id).ToList(), null, false)))
                 .ToList(),
             Total = establishments.Count,
             Page = page,
@@ -82,6 +83,7 @@ public class EstablishmentsController(ApplicationDbContext context) : Controller
     {
         var application = await context.Applications
             .AsNoTracking()
+            .Include(a => a.Photos)
             .FirstOrDefaultAsync(a => a.Id == id && a.Status == ApplicationStatus.Published);
 
         if (application == null)
@@ -90,7 +92,7 @@ public class EstablishmentsController(ApplicationDbContext context) : Controller
         }
 
         var votes = await context.Votes.AsNoTracking().Where(v => v.ApplicationId == id).ToListAsync();
-        return Ok(MapToPlaceResponse(application, votes));
+        return Ok(application.ToPlace(BuildStats(votes, null, false)));
     }
 
     [HttpGet("{id:guid}/votes")]
@@ -158,29 +160,6 @@ public class EstablishmentsController(ApplicationDbContext context) : Controller
             _ => descending
                 ? items.OrderByDescending(a => a.EstablishmentName).ToList()
                 : items.OrderBy(a => a.EstablishmentName).ToList()
-        };
-    }
-
-    private static PlaceResponse MapToPlaceResponse(Application application, List<Vote> votes)
-    {
-        var stats = BuildStats(votes, null, false);
-
-        return new PlaceResponse
-        {
-            Id = application.Id,
-            Name = application.EstablishmentName,
-            Address = application.Address,
-            Latitude = application.Latitude,
-            Longitude = application.Longitude,
-            Category = string.Empty,
-            Discount = application.DiscountDescription,
-            Conditions = application.Conditions,
-            ValidityPeriod = application.ValidityPeriod,
-            VotesYes = stats.Yes,
-            VotesNo = stats.No,
-            LastVoteDateYes = stats.LastVoteDateYes,
-            LastVoteDateNo = stats.LastVoteDateNo,
-            Status = application.Status.ToString()
         };
     }
 

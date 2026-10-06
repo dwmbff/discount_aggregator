@@ -11,7 +11,10 @@ namespace AggStudentDiscounts.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/applications")]
-public class ApplicationsController(ApplicationDbContext context) : ControllerBase
+public class ApplicationsController(
+    ApplicationDbContext context,
+    IFileStorage storage,
+    IGeocodingService geocoding) : ControllerBase
 {
     public const int DailyLimit = 4;
 
@@ -19,7 +22,12 @@ public class ApplicationsController(ApplicationDbContext context) : ControllerBa
     public async Task<ActionResult<ApplicationListResponse>> GetApplications([FromQuery] string? status)
     {
         var userId = User.GetUserId();
-        var query = context.Applications.AsNoTracking().Where(a => a.UserId == userId);
+
+        // Отменённые заявки пользователю не показываются (но учитываются в суточном лимите)
+        var query = context.Applications
+            .AsNoTracking()
+            .Include(a => a.Photos)
+            .Where(a => a.UserId == userId && a.Status != ApplicationStatus.Cancelled);
 
         if (TryParseStatus(status, out var parsedStatus))
         {
@@ -30,7 +38,7 @@ public class ApplicationsController(ApplicationDbContext context) : ControllerBa
 
         return Ok(new ApplicationListResponse
         {
-            Items = items.Select(a => MapToResponse(a)).ToList(),
+            Items = items.Select(a => a.ToResponse()).ToList(),
             Total = items.Count
         });
     }
@@ -38,7 +46,11 @@ public class ApplicationsController(ApplicationDbContext context) : ControllerBa
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ApplicationResponse>> GetApplication(Guid id)
     {
-        var application = await context.Applications.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id);
+        var application = await context.Applications
+            .AsNoTracking()
+            .Include(a => a.Photos)
+            .FirstOrDefaultAsync(a => a.Id == id && a.Status != ApplicationStatus.Cancelled);
+
         if (application == null)
         {
             return NotFound(new { message = "Заявка не найдена." });
@@ -49,22 +61,22 @@ public class ApplicationsController(ApplicationDbContext context) : ControllerBa
             return Forbid();
         }
 
-        return Ok(MapToResponse(application));
+        return Ok(application.ToResponse());
     }
 
     [HttpPost]
-    [RequestSizeLimit(20_000_000)]
-    public async Task<ActionResult<ApplicationResponse>> CreateApplication([FromForm] CreateApplicationRequest request)
+    [RequestSizeLimit(30_000_000)]
+    public async Task<ActionResult<ApplicationResponse>> CreateApplication([FromForm] CreateApplicationRequest request, CancellationToken ct)
     {
         var userId = User.GetUserId();
 
-        // Модераторы лимитом не ограничены (BR-03)
+        // Лимит проверяется по данным БД. Отменённые заявки входят в счётчик. Модераторы не ограничены (BR-03).
         if (!User.IsModerator())
         {
             var todayUtc = DateTime.UtcNow.Date;
             var tomorrowUtc = todayUtc.AddDays(1);
             var submittedToday = await context.Applications.CountAsync(a =>
-                a.UserId == userId && a.CreatedAt >= todayUtc && a.CreatedAt < tomorrowUtc);
+                a.UserId == userId && a.CreatedAt >= todayUtc && a.CreatedAt < tomorrowUtc, ct);
 
             if (submittedToday >= DailyLimit)
             {
@@ -82,21 +94,40 @@ public class ApplicationsController(ApplicationDbContext context) : ControllerBa
             Longitude = request.Longitude ?? 0,
             DiscountDescription = request.Discount.Trim(),
             Conditions = request.Conditions.Trim(),
-            ValidityPeriod = string.IsNullOrWhiteSpace(request.ValidityPeriod) ? null : request.ValidityPeriod.Trim(),
-            SourceLink = string.IsNullOrWhiteSpace(request.SourceUrl) ? null : request.SourceUrl.Trim()
+            ValidityPeriod = request.ValidityPeriod.NullIfBlank(),
+            SourceLink = request.SourceUrl.NullIfBlank(),
+            Category = request.Category.NullIfBlank(),
+            Phone = request.Phone.NullIfBlank(),
+            Website = request.Website.NullIfBlank(),
+            WorkingHours = request.WorkingHours.NullIfBlank()
         };
 
-        context.Applications.Add(application);
-        await context.SaveChangesAsync();
+        await EnrichAsync(application, request.ExternalId, ct);
 
-        var response = MapToResponse(application, request.Photos.Select(p => p.FileName).ToList());
-        return CreatedAtAction(nameof(GetApplication), new { id = application.Id }, response);
+        foreach (var file in request.Photos)
+        {
+            application.Photos.Add(new ApplicationPhoto
+            {
+                FileName = Path.GetFileName(file.FileName),
+                StoredName = await storage.SaveAsync(file, ct),
+                ContentType = UploadRules.ContentTypeFor(file.FileName),
+                Size = file.Length
+            });
+        }
+
+        context.Applications.Add(application);
+        await context.SaveChangesAsync(ct);
+
+        return CreatedAtAction(nameof(GetApplication), new { id = application.Id }, application.ToResponse());
     }
 
+    /// <summary>Отмена заявки до рассмотрения. Заявка скрывается от пользователя, но остаётся в суточном счётчике.</summary>
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> CancelApplication(Guid id)
     {
-        var application = await context.Applications.FirstOrDefaultAsync(a => a.Id == id);
+        var application = await context.Applications
+            .FirstOrDefaultAsync(a => a.Id == id && a.Status != ApplicationStatus.Cancelled);
+
         if (application == null)
         {
             return NotFound(new { message = "Заявка не найдена." });
@@ -107,34 +138,48 @@ public class ApplicationsController(ApplicationDbContext context) : ControllerBa
             return Forbid();
         }
 
-        if (application.Status != ApplicationStatus.OnModeration)
+        try
+        {
+            application.Cancel();
+        }
+        catch (InvalidOperationException)
         {
             return Conflict(new { message = "Можно отменить только заявку со статусом 'на проверке'." });
         }
 
-        context.Applications.Remove(application);
         await context.SaveChangesAsync();
         return NoContent();
     }
 
-    internal static ApplicationResponse MapToResponse(Application application, List<string>? photos = null) => new()
+    /// <summary>
+    /// Автообогащение: пустые атрибуты заявки заполняются данными объекта из геосервиса.
+    /// Недоступность сервиса не блокирует подачу заявки — данные остаются введёнными вручную.
+    /// </summary>
+    private async Task EnrichAsync(Application application, string? externalId, CancellationToken ct)
     {
-        Id = application.Id,
-        UserId = application.UserId,
-        PlaceName = application.EstablishmentName,
-        Address = application.Address,
-        Latitude = application.Latitude,
-        Longitude = application.Longitude,
-        Discount = application.DiscountDescription,
-        Conditions = application.Conditions,
-        ValidityPeriod = application.ValidityPeriod,
-        SourceUrl = application.SourceLink,
-        Photos = photos ?? [],
-        Status = application.Status.ToString(),
-        RejectionReason = application.RejectionReason,
-        CreatedAt = application.CreatedAt,
-        ModeratedAt = application.ModeratedAt
-    };
+        if (string.IsNullOrWhiteSpace(externalId))
+        {
+            return;
+        }
+
+        try
+        {
+            var place = await geocoding.LookupAsync(externalId.Trim(), ct);
+            if (place == null)
+            {
+                return;
+            }
+
+            application.Category ??= place.Category;
+            application.Phone ??= place.Phone;
+            application.Website ??= place.Website;
+            application.WorkingHours ??= place.WorkingHours;
+        }
+        catch (GeocodingUnavailableException)
+        {
+            // см. комментарий к методу
+        }
+    }
 
     internal static bool TryParseStatus(string? status, out ApplicationStatus parsed)
     {

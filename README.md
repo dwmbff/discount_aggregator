@@ -7,7 +7,8 @@ REST API агрегатора студенческих скидок. Польз�
 
 - Регистрация и вход (JWT), роли `User` и `Moderator`
 - Каталог заведений: поиск, фильтр по району, поиск по радиусу, сортировка, пагинация
-- Заявки на добавление скидки с подтверждающими файлами, личный кабинет, отмена заявки
+- Автоподсказки адресов и автоматическое дополнение заявки (категория, контакты, режим работы) данными OpenStreetMap с серверным кэшем
+- Заявки на добавление скидки с файлами-подтверждениями (JPEG, PNG, HEIC, PDF), личный кабинет, отмена заявки
 - Модерация: очередь, одобрение, отклонение с причиной, редактирование
 - Голосование за актуальность скидки (один раз в 15 дней)
 - Swagger UI, health-check, миграции БД
@@ -22,7 +23,7 @@ stateDiagram-v2
 ## Технологии
 
 .NET 9, ASP.NET Core, Entity Framework Core, PostgreSQL, JWT, BCrypt, FluentValidation,
-Swagger/OpenAPI, xUnit, Docker, GitHub Actions.
+Nominatim (OpenStreetMap), Swagger/OpenAPI, xUnit, Docker, GitHub Actions.
 
 ## Запуск через Docker
 
@@ -54,9 +55,25 @@ Swagger: http://localhost:5075/swagger
 dotnet test
 ```
 
+## Конфигурация
+
+| Параметр | Назначение |
+|---|---|
+| `ConnectionStrings:DefaultConnection` | подключение к PostgreSQL |
+| `Jwt:Key` | ключ подписи токенов (≥ 32 символов) |
+| `Storage:Path` | каталог для загруженных файлов (включить в резервное копирование) |
+| `Geocoding:*` | адрес геосервиса, User-Agent, область поиска, срок кэша |
+| `Feedback:TelegramUrl`, `Feedback:Email` | контакты обратной связи |
+| `Cors:AllowedOrigins` | разрешённые origin клиента |
+| `Security:RequireHttps` | HTTPS-редирект и HSTS |
+
+Параметры задаются через `appsettings`, user-secrets или переменные окружения (`Jwt__Key`).
+
 ## Документация
 
-Описание требований, бизнес-правил, сценариев, диаграмм и API находится в папке [docs](docs):
+Техническое задание, требования, бизнес-правила, сценарии, диаграммы и API находятся в папке [docs](docs):
+
+- [Техническое задание](docs/technical-specification.md)
 
 1. [Видение и границы проекта](docs/01-vision-and-scope.md)
 2. [Требования](docs/02-requirements.md)
@@ -64,6 +81,7 @@ dotnet test
 4. [Диаграммы](docs/04-diagrams.md)
 5. [Словарь данных и API](docs/05-data-dictionary-and-api.md)
 6. [Решения, риски, roadmap](docs/06-decisions-risks-roadmap.md)
+7. [Соответствие реализации ТЗ](docs/07-specification-compliance.md)
 
 Контракт API: [openapi.yaml](src/AggStudentDiscounts.Api/openapi.yaml)
 

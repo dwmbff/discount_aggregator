@@ -16,6 +16,14 @@ public class Application
     public string? ValidityPeriod { get; set; }
     public string? SourceLink { get; set; }
 
+    // Атрибуты заведения (вводятся вручную или подтягиваются из геоинформационного сервиса)
+    public string? Category { get; set; }
+    public string? Phone { get; set; }
+    public string? Website { get; set; }
+    public string? WorkingHours { get; set; }
+
+    public List<ApplicationPhoto> Photos { get; set; } = [];
+
     public ApplicationStatus Status { get; set; } = ApplicationStatus.OnModeration;
     public string? RejectionReason { get; set; }
 
@@ -38,6 +46,13 @@ public class Application
         Status = ApplicationStatus.Rejected;
         RejectionReason = reason;
         ModeratedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>Переход OnModeration → Cancelled (отмена автором).</summary>
+    public void Cancel()
+    {
+        EnsureOnModeration();
+        Status = ApplicationStatus.Cancelled;
     }
 
     private void EnsureOnModeration()

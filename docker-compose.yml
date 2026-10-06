@@ -30,6 +30,9 @@ services:
       Database__MigrateOnStartup: "true"
       Seed__Enabled: "true"
       Seed__Password: ${SEED_PASSWORD:-Demo12345!}
+    volumes:
+      - uploads:/data/uploads
 
 volumes:
   pgdata:
+  uploads:

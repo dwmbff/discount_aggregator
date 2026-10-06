@@ -11,5 +11,8 @@ WORKDIR /app
 COPY --from=build /app .
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
+RUN mkdir -p /data/uploads && chown $APP_UID /data/uploads
+ENV Storage__Path=/data/uploads
+VOLUME /data/uploads
 USER $APP_UID
 ENTRYPOINT ["dotnet", "AggStudentDiscounts.Api.dll"]

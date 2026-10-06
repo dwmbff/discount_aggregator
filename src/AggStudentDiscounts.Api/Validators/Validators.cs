@@ -1,4 +1,5 @@
 using AggStudentDiscounts.Api.DTOs;
+using AggStudentDiscounts.Api.Services;
 using FluentValidation;
 
 namespace AggStudentDiscounts.Api.Validators;
@@ -29,8 +30,6 @@ public class LoginRequestValidator : AbstractValidator<LoginRequest>
 
 public class CreateApplicationRequestValidator : AbstractValidator<CreateApplicationRequest>
 {
-    public static readonly string[] AllowedExtensions = [".jpg", ".jpeg", ".png", ".pdf", ".heic"];
-
     public CreateApplicationRequestValidator()
     {
         RuleFor(x => x.PlaceName).NotEmpty().MaximumLength(300);
@@ -39,12 +38,28 @@ public class CreateApplicationRequestValidator : AbstractValidator<CreateApplica
         RuleFor(x => x.Conditions).NotEmpty().MaximumLength(1000);
         RuleFor(x => x.Latitude).InclusiveBetween(-90, 90).When(x => x.Latitude.HasValue);
         RuleFor(x => x.Longitude).InclusiveBetween(-180, 180).When(x => x.Longitude.HasValue);
+        RuleFor(x => x.Category).MaximumLength(100);
+        RuleFor(x => x.Phone).MaximumLength(100);
+        RuleFor(x => x.Website).MaximumLength(300);
+        RuleFor(x => x.WorkingHours).MaximumLength(300);
+        RuleFor(x => x.ExternalId).MaximumLength(50);
         RuleFor(x => x.SourceUrl).Must(BeHttpUrl).When(x => !string.IsNullOrWhiteSpace(x.SourceUrl))
             .WithMessage("Ссылка на источник должна быть корректным http(s) URL.");
+
         RuleFor(x => x.Photos).NotEmpty().WithMessage("Нужно приложить хотя бы одно фото подтверждения.");
-        RuleForEach(x => x.Photos)
-            .Must(f => AllowedExtensions.Contains(Path.GetExtension(f.FileName).ToLowerInvariant()))
-            .WithMessage("Допустимые форматы файлов: JPEG, HEIC, PDF, PNG.");
+        RuleForEach(x => x.Photos).ChildRules(photo =>
+        {
+            photo.RuleFor(f => f.FileName)
+                .Must(UploadRules.IsAllowedExtension)
+                .WithMessage("Допустимые форматы файлов: JPEG, HEIC, PDF, PNG.");
+            photo.RuleFor(f => f.Length)
+                .LessThanOrEqualTo(UploadRules.MaxFileSize)
+                .WithMessage("Размер файла не должен превышать 10 МБ.");
+            photo.RuleFor(f => f)
+                .Must(UploadRules.HasValidSignature)
+                .When(f => UploadRules.IsAllowedExtension(f.FileName))
+                .WithMessage("Содержимое файла не соответствует его формату.");
+        });
     }
 
     private static bool BeHttpUrl(string? url) =>
@@ -59,6 +74,10 @@ public class UpdateApplicationRequestValidator : AbstractValidator<UpdateApplica
         RuleFor(x => x.Address).MaximumLength(500);
         RuleFor(x => x.Discount).MaximumLength(1000);
         RuleFor(x => x.Conditions).MaximumLength(1000);
+        RuleFor(x => x.Category).MaximumLength(100);
+        RuleFor(x => x.Phone).MaximumLength(100);
+        RuleFor(x => x.Website).MaximumLength(300);
+        RuleFor(x => x.WorkingHours).MaximumLength(300);
         RuleFor(x => x.Latitude).InclusiveBetween(-90, 90).When(x => x.Latitude.HasValue);
         RuleFor(x => x.Longitude).InclusiveBetween(-180, 180).When(x => x.Longitude.HasValue);
     }
