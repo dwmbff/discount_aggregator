@@ -1,64 +1,52 @@
-# AggStudentDiscounts — агрегатор студенческих скидок
+# AggStudentDiscounts
 
-Backend-сервис каталога **проверенных** студенческих скидок: пользователи предлагают скидки,
-модераторы их проверяют, сообщество подтверждает актуальность.
+REST API агрегатора студенческих скидок. Пользователи предлагают скидки, модераторы проверяют заявки,
+сообщество подтверждает актуальность. Опубликованные скидки доступны всем в каталоге с поиском и фильтрами.
 
-Проект оформлен как **портфолио системного аналитика**: помимо работающего API здесь есть полный
-аналитический пакет — требования, бизнес-правила, use cases, диаграммы, словарь данных, ADR и риски.
+## Возможности
 
-## Аналитическая документация
-
-| Документ | Содержание |
-|---|---|
-| [01 · Видение и границы](docs/01-vision-and-scope.md) | Проблема, цели, метрики, стейкхолдеры, scope, допущения, глоссарий |
-| [02 · Требования](docs/02-requirements.md) | Бизнес-правила BR-01…10, user stories с критериями приёмки, FR/NFR, матрица трассируемости |
-| [03 · Use cases](docs/03-use-cases.md) | Диаграмма вариантов использования, матрица прав, спецификации сценариев, коды ошибок |
-| [04 · Диаграммы](docs/04-diagrams.md) | Процесс (BPMN-подобный), состояния заявки, sequence, ER, архитектура (Mermaid) |
-| [05 · Данные и API](docs/05-data-dictionary-and-api.md) | Сводка эндпоинтов, словарь данных, примеры запросов |
-| [06 · Решения и риски](docs/06-decisions-risks-roadmap.md) | ADR, аудит первой версии, реестр рисков, открытые вопросы, roadmap |
-| [OpenAPI](src/AggStudentDiscounts.Api/openapi.yaml) | Контракт API (OpenAPI 3.0) |
-
-## Как работает
+- Регистрация и вход (JWT), роли `User` и `Moderator`
+- Каталог заведений: поиск, фильтр по району, поиск по радиусу, сортировка, пагинация
+- Заявки на добавление скидки с подтверждающими файлами, личный кабинет, отмена заявки
+- Модерация: очередь, одобрение, отклонение с причиной, редактирование
+- Голосование за актуальность скидки (один раз в 15 дней)
+- Swagger UI, health-check, миграции БД
 
 ```mermaid
 stateDiagram-v2
-    [*] --> OnModeration: студент подаёт заявку
-    OnModeration --> Published: модератор одобряет
-    OnModeration --> Rejected: модератор отклоняет (с причиной)
-    Published --> Published: голосование «актуально / нет»
+    [*] --> OnModeration: заявка подана
+    OnModeration --> Published: одобрена
+    OnModeration --> Rejected: отклонена (с причиной)
 ```
-
-- **Гость** — смотрит каталог (поиск, район, радиус, сортировка, пагинация).
-- **Студент** — регистрируется, подаёт заявки (до 4 в сутки), следит за статусом, голосует (раз в 15 дней).
-- **Модератор** — очередь заявок, одобрение/отклонение, правка данных.
 
 ## Технологии
 
-.NET 9 · ASP.NET Core Web API · EF Core + PostgreSQL · JWT (Bearer) · BCrypt · FluentValidation ·
-Swagger/OpenAPI · xUnit + WebApplicationFactory · Docker · GitHub Actions
+.NET 9, ASP.NET Core, Entity Framework Core, PostgreSQL, JWT, BCrypt, FluentValidation,
+Swagger/OpenAPI, xUnit, Docker, GitHub Actions.
 
-## Быстрый старт (Docker)
+## Запуск через Docker
 
 ```bash
 docker compose up --build
 ```
 
-- API: http://localhost:8080 · Swagger: http://localhost:8080/swagger · Health: `/health`
-- Миграции применяются автоматически, создаются демо-данные.
-- Демо-учётки (пароль `Demo12345!`, меняется через `SEED_PASSWORD`):
-  `moderator@example.com` (роль Moderator), `student@example.com` (роль User).
+- API: http://localhost:8080, Swagger: http://localhost:8080/swagger, health: `/health`
+- Миграции применяются автоматически, создаются демо-данные
+- Демо-учётки (пароль `Demo12345!`, задаётся через `SEED_PASSWORD`): `moderator@example.com`, `student@example.com`
 
-## Локальный запуск без Docker
+## Запуск без Docker
 
-Нужны .NET SDK 9 и PostgreSQL. Секреты не хранятся в репозитории:
+Требуются .NET SDK 9 и PostgreSQL.
 
 ```bash
 cd src/AggStudentDiscounts.Api
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=aggstudentdiscounts;Username=postgres;Password=<пароль>"
 dotnet user-secrets set "Jwt:Key" "<случайная строка от 32 символов>"
 dotnet ef database update
-dotnet run --launch-profile http   # http://localhost:5075/swagger
+dotnet run --launch-profile http
 ```
+
+Swagger: http://localhost:5075/swagger
 
 ## Тесты
 
@@ -66,26 +54,29 @@ dotnet run --launch-profile http   # http://localhost:5075/swagger
 dotnet test
 ```
 
-21 тест: юнит-тесты домена (конечный автомат заявки, пересчёт курса) и интеграционные тесты всего HTTP-пайплайна
-(регистрация, JWT, роли, лимиты, жизненный цикл «заявка → модерация → каталог → голосование»).
-CI запускает их на каждый push и pull request.
+## Документация
+
+Описание требований, бизнес-правил, сценариев, диаграмм и API находится в папке [docs](docs):
+
+1. [Видение и границы проекта](docs/01-vision-and-scope.md)
+2. [Требования](docs/02-requirements.md)
+3. [Варианты использования](docs/03-use-cases.md)
+4. [Диаграммы](docs/04-diagrams.md)
+5. [Словарь данных и API](docs/05-data-dictionary-and-api.md)
+6. [Решения, риски, roadmap](docs/06-decisions-risks-roadmap.md)
+
+Контракт API: [openapi.yaml](src/AggStudentDiscounts.Api/openapi.yaml)
 
 ## Структура
 
 ```text
-docs/                         аналитическая документация
+docs/                                   документация
 src/AggStudentDiscounts.Api/
-  Controllers/                REST-контроллеры
-  DTOs/  Validators/          контракты и правила валидации
-  Services/                   JWT, сидер демо-данных
-  Infrastructure/Persistence/ DbContext
-  AggStudentDiscounts.Domain/Entities/   доменные сущности и правила
-  Migrations/                 миграции EF Core
-tests/AggStudentDiscounts.Tests/         unit + integration
+  Controllers/                          REST-контроллеры
+  DTOs/, Validators/                    контракты и валидация
+  Services/                             JWT, демо-данные
+  Infrastructure/Persistence/           DbContext
+  AggStudentDiscounts.Domain/Entities/  доменные сущности
+  Migrations/                           миграции EF Core
+tests/AggStudentDiscounts.Tests/        unit- и интеграционные тесты
 ```
-
-## Известные ограничения
-
-- Файлы-подтверждения пока только проверяются по формату и **не сохраняются** (FR-09, см. roadmap).
-- Радиусный поиск считается на стороне приложения; для больших каталогов планируется PostGIS (риск R-4).
-- Геокодирование описано в OpenAPI как целевое, не реализовано.
