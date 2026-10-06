@@ -1,0 +1,26 @@
+@host = http://localhost:5075
+@token = <вставьте accessToken из ответа login>
+
+### Регистрация
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{ "email": "anna@example.com", "password": "Password123", "name": "Анна",
+  "university": "МГУ", "department": "ВМК", "course": 2 }
+
+### Вход
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "anna@example.com", "password": "Password123" }
+
+### Профиль
+GET {{host}}/api/auth/me
+Authorization: Bearer {{token}}
+
+### Каталог (без авторизации)
+GET {{host}}/api/establishments?search=кофе&page=1&pageSize=20
+
+### Очередь модерации (роль Moderator)
+GET {{host}}/api/admin/applications
+Authorization: Bearer {{token}}
